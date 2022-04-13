@@ -1,0 +1,1228 @@
+from math import floor, cos, sin, atan2, tan, asin, atan, acos, fabs
+import os, ntplib
+from datetime import datetime, timedelta, timezone
+
+spa_Input_Dict = {
+    "year": None,
+    "month": None,
+    "day": None,
+    "end_year": None,
+    "end_month": None,
+    "end_day": None,
+    "hour": 0,
+    "minute": 0,
+    "second": 0,
+    "pressure": None,
+    "temperature": None,
+    "delta_ut1": None,
+    "delta_t": None,
+    "timezone": None,
+    "latitude": None,
+    "longitude": None,
+    "atmos_refract": None,
+    "elevation": None,
+    "slope": None,
+    "azm_rotation": None,
+    "dst_month": None,
+    "dst_day": None,
+    "lst_month": None,
+    "lst_day": None
+}
+
+errorReturn = {
+    "1": "The year must have a value between -2000 and 6000",
+    "2": "The month must have a value between 1 and 12",
+    "3": "February in a leap year must have a value between 1 and 29",
+    "4": "February in a standard year must have a day value between 1 and 28",
+    "5": "This month must have a day value between 1 and 30",
+    "6": "This month must have a day value between 1 and 31",
+    "7": "The hour must have a value between 0 and 24",
+    "8": "The minute must have a value between 0 and 59",
+    "9": "The second must have a value between 0 and 59",
+    "10": "The pressure must have a value between 0 and 5000",
+    "11": "The temperature must have a value between -273 and 6000",
+    "12": "Delta UT1 must have a value between -1 and 1",
+    "13": "If the hour is 24, then the minute and second must have a value of 0",
+    "14": "Delta T must have a value between -8000 and 8000",
+    "15": "The timezone must have a value between -18 and 18",
+    "16": "The longitude must have a value between -180 and 180",
+    "17": "The latitude must have a value between -90 and 90",
+    "18": "The atmospheric refraction must have a value between -5 and 5",
+    "19": "The elevation must have a value greater than or equal to -6,500,000",
+    "20": "The slope must have a value between -360 and 360",
+    "21": "The surface azimuth rotation must have a value between -360 and 360",
+    "22": "The start date must be before the end date"
+}
+
+# Max counts for the Terms
+l_COUNT = 6
+b_COUNT = 2
+r_COUNT = 5
+y_COUNT = 63
+term_X_Count = 5
+term_Y_Count = 5
+
+# Max subcounts for the terms
+l_MAX_SUBCOUNT = 64
+b_MAX_SUBCOUNT = 5
+r_MAX_SUBCOUNT = 40
+
+# Arrays of each of the subcounts
+l_subcount= [64, 34, 20, 7, 3, 1]
+b_subcount = [5, 2]
+r_subcount = [40, 10, 6, 2, 1]
+psi_A = 0
+psi_B = 1
+eps_C = 2
+eps_D = 3
+
+##############################################################################
+############################ Earth Periodic Terms ############################
+##############################################################################
+L_Terms = [
+    [
+       [175347046.0,0,0],
+        [3341656.0,4.6692568,6283.07585],
+        [34894.0,4.6261,12566.1517],
+        [3497.0,2.7441,5753.3849],
+        [3418.0,2.8289,3.5231],
+        [3136.0,3.6277,77713.7715],
+        [2676.0,4.4181,7860.4194],
+        [2343.0,6.1352,3930.2097],
+        [1324.0,0.7425,11506.7698],
+        [1273.0,2.0371,529.691],
+        [1199.0,1.1096,1577.3435],
+        [990,5.233,5884.927],
+        [902,2.045,26.298],
+        [857,3.508,398.149],
+        [780,1.179,5223.694],
+        [753,2.533,5507.553],
+        [505,4.583,18849.228],
+        [492,4.205,775.523],
+        [357,2.92,0.067],
+        [317,5.849,11790.629],
+        [284,1.899,796.298],
+        [271,0.315,10977.079],
+        [243,0.345,5486.778],
+        [206,4.806,2544.314],
+        [205,1.869,5573.143],
+        [202,2.458,6069.777],
+        [156,0.833,213.299],
+        [132,3.411,2942.463],
+        [126,1.083,20.775],
+        [115,0.645,0.98],
+        [103,0.636,4694.003],
+        [102,0.976,15720.839],
+        [102,4.267,7.114],
+        [99,6.21,2146.17],
+        [98,0.68,155.42],
+        [86,5.98,161000.69],
+        [85,1.3,6275.96],
+        [85,3.67,71430.7],
+        [80,1.81,17260.15],
+        [79,3.04,12036.46],
+        [75,1.76,5088.63],
+        [74,3.5,3154.69],
+        [74,4.68,801.82],
+        [70,0.83,9437.76],
+        [62,3.98,8827.39],
+        [61,1.82,7084.9],
+        [57,2.78,6286.6],
+        [56,4.39,14143.5],
+        [56,3.47,6279.55],
+        [52,0.19,12139.55],
+        [52,1.33,1748.02],
+        [51,0.28,5856.48],
+        [49,0.49,1194.45],
+        [41,5.37,8429.24],
+        [41,2.4,19651.05],
+        [39,6.17,10447.39],
+        [37,6.04,10213.29],
+        [37,2.57,1059.38],
+        [36,1.71,2352.87],
+        [36,1.78,6812.77],
+        [33,0.59,17789.85],
+        [30,0.44,83996.85],
+        [30,2.74,1349.87],
+        [25,3.16,4690.48]
+    ],
+    [
+        [628331966747.0,0,0],
+        [206059.0,2.678235,6283.07585],
+        [4303.0,2.6351,12566.1517],
+        [425.0,1.59,3.523],
+        [119.0,5.796,26.298],
+        [109.0,2.966,1577.344],
+        [93,2.59,18849.23],
+        [72,1.14,529.69],
+        [68,1.87,398.15],
+        [67,4.41,5507.55],
+        [59,2.89,5223.69],
+        [56,2.17,155.42],
+        [45,0.4,796.3],
+        [36,0.47,775.52],
+        [29,2.65,7.11],
+        [21,5.34,0.98],
+        [19,1.85,5486.78],
+        [19,4.97,213.3],
+        [17,2.99,6275.96],
+        [16,0.03,2544.31],
+        [16,1.43,2146.17],
+        [15,1.21,10977.08],
+        [12,2.83,1748.02],
+        [12,3.26,5088.63],
+        [12,5.27,1194.45],
+        [12,2.08,4694],
+        [11,0.77,553.57],
+        [10,1.3,6286.6],
+        [10,4.24,1349.87],
+        [9,2.7,242.73],
+        [9,5.64,951.72],
+        [8,5.3,2352.87],
+        [6,2.65,9437.76],
+        [6,4.67,4690.48]
+    ],
+    [
+        [52919.0,0,0],
+        [8720.0,1.0721,6283.0758],
+        [309.0,0.867,12566.152],
+        [27,0.05,3.52],
+        [16,5.19,26.3],
+        [16,3.68,155.42],
+        [10,0.76,18849.23],
+        [9,2.06,77713.77],
+        [7,0.83,775.52],
+        [5,4.66,1577.34],
+        [4,1.03,7.11],
+        [4,3.44,5573.14],
+        [3,5.14,796.3],
+        [3,6.05,5507.55],
+        [3,1.19,242.73],
+        [3,6.12,529.69],
+        [3,0.31,398.15],
+        [3,2.28,553.57],
+        [2,4.38,5223.69],
+        [2,3.75,0.98]
+    ],
+    [
+        [289.0,5.844,6283.076],
+        [35,0,0],
+        [17,5.49,12566.15],
+        [3,5.2,155.42],
+        [1,4.72,3.52],
+        [1,5.3,18849.23],
+        [1,5.97,242.73]
+    ],
+    [
+        [114.0,3.142,0],
+        [8,4.13,6283.08],
+        [1,3.84,12566.15]
+    ],
+    [
+        [1,3.14,0],
+    ]
+]
+
+B_Terms = [
+    [
+        [280.0,3.199,84334.662],
+        [102.0,5.422,5507.553],
+        [80,3.88,5223.69],
+        [44,3.7,2352.87],
+        [32,4,1577.34]
+    ],
+    [
+        [9,3.9,5507.55],
+        [6,1.73,5223.69]
+    ]
+]
+
+R_Terms = [
+    [
+        [100013989.0,0,0],
+        [1670700.0,3.0984635,6283.07585],
+        [13956.0,3.05525,12566.1517],
+        [3084.0,5.1985,77713.7715],
+        [1628.0,1.1739,5753.3849],
+        [1576.0,2.8469,7860.4194],
+        [925.0,5.453,11506.77],
+        [542.0,4.564,3930.21],
+        [472.0,3.661,5884.927],
+        [346.0,0.964,5507.553],
+        [329.0,5.9,5223.694],
+        [307.0,0.299,5573.143],
+        [243.0,4.273,11790.629],
+        [212.0,5.847,1577.344],
+        [186.0,5.022,10977.079],
+        [175.0,3.012,18849.228],
+        [110.0,5.055,5486.778],
+        [98,0.89,6069.78],
+        [86,5.69,15720.84],
+        [86,1.27,161000.69],
+        [65,0.27,17260.15],
+        [63,0.92,529.69],
+        [57,2.01,83996.85],
+        [56,5.24,71430.7],
+        [49,3.25,2544.31],
+        [47,2.58,775.52],
+        [45,5.54,9437.76],
+        [43,6.01,6275.96],
+        [39,5.36,4694],
+        [38,2.39,8827.39],
+        [37,0.83,19651.05],
+        [37,4.9,12139.55],
+        [36,1.67,12036.46],
+        [35,1.84,2942.46],
+        [33,0.24,7084.9],
+        [32,0.18,5088.63],
+        [32,1.78,398.15],
+        [28,1.21,6286.6],
+        [28,1.9,6279.55],
+        [26,4.59,10447.39]
+    ],
+    [
+        [103019.0,1.10749,6283.07585],
+        [1721.0,1.0644,12566.1517],
+        [702.0,3.142,0],
+        [32,1.02,18849.23],
+        [31,2.84,5507.55],
+        [25,1.32,5223.69],
+        [18,1.42,1577.34],
+        [10,5.91,10977.08],
+        [9,1.42,6275.96],
+        [9,0.27,5486.78]
+    ],
+    [
+        [4359.0,5.7846,6283.0758],
+        [124.0,5.579,12566.152],
+        [12,3.14,0],
+        [9,3.63,77713.77],
+        [6,1.87,5573.14],
+        [3,5.47,18849.23]
+    ],
+    [
+        [145.0,4.273,6283.076],
+        [7,3.92,12566.15]
+    ],
+    [
+        [4,2.56,6283.08],
+    ]
+]
+
+##############################################################################
+######### Periodic Terms for the Nutation in Longitude and Obliquity #########
+##############################################################################
+
+Y_Terms = [
+        [0,0,0,0,1],
+        [-2,0,0,2,2],
+        [0,0,0,2,2],
+        [0,0,0,0,2],
+        [0,1,0,0,0],
+        [0,0,1,0,0],
+        [-2,1,0,2,2],
+        [0,0,0,2,1],
+        [0,0,1,2,2],
+        [-2,-1,0,2,2],
+        [-2,0,1,0,0],
+        [-2,0,0,2,1],
+        [0,0,-1,2,2],
+        [2,0,0,0,0],
+        [0,0,1,0,1],
+        [2,0,-1,2,2],
+        [0,0,-1,0,1],
+        [0,0,1,2,1],
+        [-2,0,2,0,0],
+        [0,0,-2,2,1],
+        [2,0,0,2,2],
+        [0,0,2,2,2],
+        [0,0,2,0,0],
+        [-2,0,1,2,2],
+        [0,0,0,2,0],
+        [-2,0,0,2,0],
+        [0,0,-1,2,1],
+        [0,2,0,0,0],
+        [2,0,-1,0,1],
+        [-2,2,0,2,2],
+        [0,1,0,0,1],
+        [-2,0,1,0,1],
+        [0,-1,0,0,1],
+        [0,0,2,-2,0],
+        [2,0,-1,2,1],
+        [2,0,1,2,2],
+        [0,1,0,2,2],
+        [-2,1,1,0,0],
+        [0,-1,0,2,2],
+        [2,0,0,2,1],
+        [2,0,1,0,0],
+        [-2,0,2,2,2],
+        [-2,0,1,2,1],
+        [2,0,-2,0,1],
+        [2,0,0,0,1],
+        [0,-1,1,0,0],
+        [-2,-1,0,2,1],
+        [-2,0,0,0,1],
+        [0,0,2,2,1],
+        [-2,0,2,0,1],
+        [-2,1,0,2,1],
+        [0,0,1,-2,0],
+        [-1,0,1,0,0],
+        [-2,1,0,0,0],
+        [1,0,0,0,0],
+        [0,0,1,2,0],
+        [0,0,-2,2,2],
+        [-1,-1,1,0,0],
+        [0,1,1,0,0],
+        [0,-1,1,2,2],
+        [2,-1,-1,2,2],
+        [0,0,3,2,2],
+        [2,-1,0,2,2], 
+]
+
+PE_Term = [
+    [-171996,-174.2,92025,8.9],
+    [-13187,-1.6,5736,-3.1],
+    [-2274,-0.2,977,-0.5],
+    [2062,0.2,-895,0.5],
+    [1426,-3.4,54,-0.1],
+    [712,0.1,-7,0],
+    [-517,1.2,224,-0.6],
+    [-386,-0.4,200,0],
+    [-301,0,129,-0.1],
+    [217,-0.5,-95,0.3],
+    [-158,0,0,0],
+    [129,0.1,-70,0],
+    [123,0,-53,0],
+    [63,0,0,0],
+    [63,0.1,-33,0],
+    [-59,0,26,0],
+    [-58,-0.1,32,0],
+    [-51,0,27,0],
+    [48,0,0,0],
+    [46,0,-24,0],
+    [-38,0,16,0],
+    [-31,0,13,0],
+    [29,0,0,0],
+    [29,0,-12,0],
+    [26,0,0,0],
+    [-22,0,0,0],
+    [21,0,-10,0],
+    [17,-0.1,0,0],
+    [16,0,-8,0],
+    [-16,0.1,7,0],
+    [-15,0,9,0],
+    [-13,0,7,0],
+    [-12,0,6,0],
+    [11,0,0,0],
+    [-10,0,5,0],
+    [-8,0,3,0],
+    [7,0,-3,0],
+    [-7,0,0,0],
+    [-7,0,3,0],
+    [-7,0,3,0],
+    [6,0,0,0],
+    [6,0,-3,0],
+    [6,0,-3,0],
+    [-6,0,3,0],
+    [-6,0,3,0],
+    [5,0,0,0],
+    [-5,0,3,0],
+    [-5,0,3,0],
+    [-5,0,3,0],
+    [4,0,0,0],
+    [4,0,0,0],
+    [4,0,0,0],
+    [-4,0,0,0],
+    [-4,0,0,0],
+    [-4,0,0,0],
+    [3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+    [-3,0,0,0],
+]
+
+# pi definition
+pi = float(3.1415926535897932384626433832795028841971)
+sunRadius = 0.26667
+h0_Prime = -0.8333
+
+# UT1 Time Retrieval
+def ut1_Time():
+    timeServer = ntplib.NTPClient()
+    responseUt1 = timeServer.request('ut1-wwv.nist.gov', version=3)
+
+    return responseUt1
+
+# UTC Time Retrieval
+def utc_Time():
+    timeServer = ntplib.NTPClient()
+    responseUtc = timeServer.request('time.google.com', version=3)
+
+    return responseUtc
+
+def ut1Tuple():
+    ut1Tuple = datetime.fromtimestamp(ut1_Time().tx_time, tz=timezone.utc).timetuple()
+
+    return ut1Tuple
+
+def ut1Stamp():
+    ut1Stamp = datetime.fromtimestamp(ut1_Time().tx_time, tz=timezone.utc)
+
+    return ut1Stamp
+
+def utcTuple():
+    utcTuple = datetime.fromtimestamp(utc_Time().tx_time, tz=timezone.utc).timetuple()
+
+    return utcTuple
+
+def utcStamp():
+    utcStamp = datetime.fromtimestamp(utc_Time().tx_time, tz=timezone.utc)
+
+    return utcStamp
+
+def deltaT(leapSeconds, dUT1):
+    deltaT = 32.184 + leapSeconds + dUT1
+
+    return deltaT
+
+# Leap year test
+def check_Leap_Year(year):
+    if(((year % 4 == 0) and (year % 100 != 0)) or (year % 400 == 0)): return 1
+    return 0
+
+def timezoneOffset(timezoneMinutes, dstFlag):
+    return (timezoneMinutes / 60 / 60)
+
+# Convert Radians to Degrees
+def rad2deg(radians):
+        return (180.0/pi) * radians
+    
+# Convert Degrees to Radians
+def deg2rad(degrees):
+    return (pi/180.0) * degrees
+
+# Limits Degrees
+def limitDegrees(degrees):
+    degrees /= 360.0
+    limited = 360.0 * (degrees - floor(degrees))
+    if(limited < 0): limited += 360.0
+    
+    return limited
+
+# Limit Degrees within 180 (Special)
+def limitDegrees180pm(degrees):
+    degrees /= 360.0
+    limited = 360.0 * (degrees - floor(degrees))
+    if(limited < -180.0): limited += 360.0
+    elif(limited > 180.0): limited -= 360.0
+
+    return limited
+
+def limitDegrees180(degrees):
+    degrees /= 180.0
+    limited = 180.0 * (degrees - floor(degrees))
+    if (limited < 0): 
+        limited += 180.0
+
+    return limited
+
+# Limit value from -1 to 1
+def limitZero2One(value):
+    limited = value - floor(value)
+    if (limited < 0): limited += 1.0
+
+    return limited
+
+# Limit minutes (used for converting degrees into minutes of time)
+def limitMinutes(minutes):
+    limited = minutes
+    if(limited < -20.0): limited += 1440
+    elif(limited > 20.0): limited -= 1400.0
+
+    return limited
+
+def dayfrac_to_Local_hr(dayfrac, timezone):
+    return 24.0 * limitZero2One(dayfrac + timezone / 24.0)
+
+def dayfrac_to_Time(dayfrac):
+    hours = int(dayfrac)
+    minutes = (dayfrac - hours) * 60
+    seconds = (minutes - int(minutes)) * 60
+
+    minutes = round(minutes)
+    seconds = round(seconds)
+
+    if(seconds == 60):
+        seconds = 0
+        minutes += 1
+    
+    elif(seconds > 60):
+        second -= 60
+        minute += 1
+
+    if(minutes == 60):
+        minutes = 0
+        hours += 1
+
+    elif(minutes > 60):
+        minutes -= 60
+        hours += 1
+
+    if(hours == 24):
+        hours = 0
+
+    return hours, minutes, seconds
+
+def third_order_polynomial(a, b, c, d, x):
+    return ((a * x + b) * x + c) * x + d
+
+# Location information (Lat, Long, Timezone offset GMT in Seconds)
+def location():
+    import urllib.request
+    import json
+    from requests import get
+
+    # Retrieving public IP
+    ip = get('https://api.ipify.org').text 
+
+    # IP based GEO Location
+    whoIS = urllib.request.urlopen('https://ipwhois.app/json/' + ip)
+    geolocation = json.load(whoIS)
+    latitude = geolocation['latitude'] # Lat in Degrees
+    longitude = geolocation['longitude'] # Long in Degrees
+    timeZone = geolocation['timezone_gmtOffset'] # GMT offset in seconds
+
+    return latitude, longitude, timeZone
+
+#############################################################################################
+def validateInputs(inputDict):
+    list_31 = [1,3,5,7,8,10,12]
+    list_30 = [4,6,9,11]
+    
+    # Valid Year Range Test
+    if(inputDict.get("year") < -2000 or inputDict.get("year") > 6000): return 1
+    if(inputDict.get("end_year") is not None): 
+        if(inputDict.get("end_year") < -2000 or inputDict.get("end_year") > 6000): return 1
+        if(inputDict.get("year") > inputDict.get("end_year")): return 22
+
+    # Valid Month Range Test
+    if(inputDict.get("month") < 1 or inputDict.get("month") > 12): return 2
+    if(inputDict.get("end_month") is not None): 
+        if(inputDict.get("end_month") < 1 or inputDict.get("end_month") > 12): return 2
+    
+    # Valid Day Range Test
+    if(check_Leap_Year(inputDict.get("year"))):
+        if(inputDict.get("month") == 2 and inputDict.get("day") > 29): return 3
+    elif(inputDict.get("month") == 2 and inputDict.get("day") > 28): return 4
+    
+    for m in range(len(list_30)):
+        if(inputDict.get("month") == list_30[m] and inputDict.get("day") > 30): return 5
+    
+    for m in range(len(list_31)):
+        if(inputDict.get("month") == list_31[m] and inputDict.get("day") > 31): return 6
+
+    # Valid Day Range Test for end dates
+    if(inputDict.get("end_year") is not None and inputDict.get("end_month") is not None and inputDict.get("end_day") is not None):
+        if(check_Leap_Year(inputDict.get("end_year"))):
+            if(inputDict.get("end_month") == 2 and inputDict.get("end_day") > 29): return 3
+        elif(inputDict.get("end_month") == 2 and inputDict.get("end_day") > 28): return 4
+    
+        for m in range(len(list_30)):
+            if(inputDict.get("end_month") == list_30[m] and inputDict.get("end_day") > 30): return 5
+    
+        for m in range(len(list_31)):
+            if(inputDict.get("end_month") == list_31[m] and inputDict.get("end_day") > 31): return 6
+
+    if(inputDict.get("hour") < 0 or inputDict.get("hour") > 24): return 7
+    if(inputDict.get("minute") < 0 or inputDict.get("minute") > 59): return 8
+    if(inputDict.get("second") < 0 or inputDict.get("second") >= 60): return 9
+    if(inputDict.get("pressure") < 0 or inputDict.get("pressure") > 5000): return 10
+    if(inputDict.get("temperature") <= -273 or inputDict.get("temperature") > 6000): return 11
+    if(inputDict.get("delta_ut1") <= -1 or inputDict.get("delta_ut1") >= 1): return 12
+    if(inputDict.get("hour") == 24 and inputDict.get("minute") > 0): return 13
+    if(inputDict.get("hour") == 24 and inputDict.get("second") > 0): return 13
+
+    if(fabs(inputDict.get("delta_t")) > 8000): return 14
+    if(fabs(inputDict.get("timezone")) > 18): return 15
+    if(fabs(inputDict.get("longitude")) > 180): return 16
+    if(fabs(inputDict.get("latitude")) > 90): return 17
+    if(fabs(inputDict.get("atmos_refract")) > 5): return 18
+    if(inputDict.get("elevation") < -6500000): return 19
+
+    if(fabs(inputDict.get("slope")) > 360): return 20
+    if(fabs(inputDict.get("azm_rotation")) > 360): return 21
+
+    
+    
+    return 0
+#############################################################################################
+
+#############################################################################################
+def errorCode(code):
+    if(code > 0):
+        error = errorReturn.get(str(code))
+        return error
+    elif(code == 0):
+        return 0
+#############################################################################################
+# Calculates JD
+def julianDay(year, month, day, hour, minute, second, dut1, tz):
+    
+    # Gets the decimal day for the give day of the month.  If the time zone is 0 replace tz with 0.
+    dayDecimal = day + (hour - 0 + (minute + (second + dut1) / 60.0) / 60.0) / 24
+    
+    # Tests what month number it is
+    if(month < 3):
+        month += 12
+        year -= 1
+    
+    # Gets the Julian Day. (NOTE: if the local time zone is used the absolute value of the timezone / 24 to correct the Julian day)
+    julianDay = int(365.25 * (year + 4716)) + int(30.6001 * (month + 1)) + dayDecimal - 1524.5# - fabs((tz / 24))
+    
+    # Final test for leap year
+    if(julianDay > 2299160):
+        a = int(year / 100)
+        julianDay += (2 - a + int(a / 4)) 
+
+    return round(julianDay,6)
+
+# Calculates JC
+def julianCentury(jd):
+    return round((jd - 2451545) / 36525, 6)
+
+# Calculates JDE
+def julianEphemerisDay(jd, deltaT):
+    return round(jd + deltaT / 86400, 6)
+
+# Calculates JCE
+def julianEphemerisCentury(jde):
+    return round((jde - 2451545) / 36525, 6)
+
+# Calculates JME
+def julianEphemerisMillennium(jce):
+    return round(jce / 10, 6)
+
+def earth_Periodic_Term_Summation(terms, jme):
+    iSum = 0
+    for i in range(len(terms)):
+        termA = terms[i][0]
+        termB = terms[i][1]
+        termC = terms[i][2]
+        iSum += termA * cos(termB + termC * jme)
+
+    return iSum
+
+def earth_Values(termSum, jme):
+    sum = 0
+    for i in range(len(termSum)):
+        sum += termSum[i] * (jme ** i)
+    
+    sum /= 10**8
+
+    return sum
+
+# Calculates L
+def earth_Heliocentric_Longitude(jme):
+    sumArray = []
+    sum = 0
+    
+    for i in range(l_COUNT):
+        sum = earth_Periodic_Term_Summation(L_Terms[i], jme)
+        sumArray.append(sum)
+        result = limitDegrees(rad2deg(earth_Values(sumArray, jme)))
+
+    return round(result, 6) 
+
+# Calculate B
+def earth_Heliocentric_Latitude(jme):
+    sumArray = []
+    sum = 0
+    
+    for i in range(b_COUNT):
+        sum = earth_Periodic_Term_Summation(B_Terms[i], jme)
+        sumArray.append(sum)   
+        result = rad2deg(earth_Values(sumArray, jme))
+
+    return round(result, 6) 
+
+# Calculate R
+def earth_Radius_Vector(jme):
+    sumArray = []
+    sum = 0
+    
+    for i in range(r_COUNT):
+        sum = earth_Periodic_Term_Summation(R_Terms[i], jme)
+        sumArray.append(sum)   
+        result = earth_Values(sumArray, jme)
+
+    return round(result, 6)
+
+# Calculates Theta
+def geocentric_Longitude(l):
+    theta = l + 180.0
+
+    if(theta >= 360.0):
+        theta -= 360.0
+    
+    return round(theta, 6)
+
+# Calculates Beta
+def geocentric_Latitude(b):
+    return -b
+
+# Calculates X0
+def mean_Elongation_Moon_Sun(jce):
+    return round(third_order_polynomial(1.0 / 189474.0, -0.0019142, 445267.11148, 297.85036, jce), 6)
+
+# Calculates X1
+def mean_Anomaly_Sun(jce):
+    return round(third_order_polynomial(-1.0/300000.0, -0.0001603, 35999.05034, 357.52772, jce), 6)
+
+# Calculates X2
+def mean_Anomaly_Moon(jce):
+    return round(third_order_polynomial(1.0/56250.0, 0.0086972, 477198.867398, 134.96298, jce), 6)
+
+# Calculates X3
+def argument_Latitude_Moon(jce):
+    return round(third_order_polynomial(1.0/327270.0, -0.0036825, 483202.017538, 93.27191, jce), 6)
+
+# Calculates X4
+def ascending_Longitude_Moon(jce):
+    return round(third_order_polynomial(1.0/450000.0, 0.0020708, -1934.136261, 125.04452, jce), 6)
+
+def xy_Term_Summation(i, x):
+    sum = 0
+
+    for j in range(len(x)):
+        sum += x[j] * Y_Terms[i][j]
+
+    return sum
+
+# Calculates Psi and Epsilon
+def nutation_Longitude_and_Obliquity(jce, xList):
+    sum_Psi = 0
+    sum_Epsilon = 0
+    xy_Term_Sum = 0
+
+    for i in range(len(Y_Terms)):
+        xy_Term_Sum = deg2rad(xy_Term_Summation(i, xList))
+        sum_Psi += (PE_Term[i][psi_A] + jce * PE_Term[i][psi_B]) * sin(xy_Term_Sum)
+        sum_Epsilon += (PE_Term[i][eps_C] + jce * PE_Term[i][eps_D]) * cos(xy_Term_Sum)
+    
+    d_Psi = round(sum_Psi / 36000000.0, 6)
+    d_Epsilon = round(sum_Epsilon / 36000000.0, 6)
+
+    return d_Psi, d_Epsilon
+
+# Calculates Epsilon0 
+def ecliptic_Mean_Obliquity(jme):
+    u = jme / 10.0
+
+    return round(84381.448 + u * (-4680.93 + u * (-1.55 + u * (1999.25 + u * (-51.38 + u * (-249.67 +
+                       u * (  -39.05 + u * ( 7.12 + u * (  27.87 + u * (  5.79 + u * 2.45))))))))), 6)
+
+# Calculates Epsilon
+def ecliptic_True_Obliquity(delta_Epsilon, epsilon0):
+    return round(delta_Epsilon + epsilon0 / 3600.0, 6)
+
+# Calculates Del_Tau
+def abberation_Correction(r):
+    return round(-20.4898 / (3600.0*r), 6)
+
+# Calculates Lamda
+def apparent_Sun_Longitude(theta, delta_Psi, delta_Tau):
+    return round(theta + delta_Psi + delta_Tau, 6)
+
+# Calculates nu0
+def greenwich_Mean_Sidereal_Time(jd, jc):
+    return round(limitDegrees(280.46061837 + 360.98564736629 * (jd - 2451545.0) +
+                                       jc * jc * (0.000387933 - jc / 38710000.0)), 6)
+
+# Calculates nu
+def greenwich_Sidereal_Time(nu0, delta_psi, epsilon):
+    return round(nu0 + delta_psi*cos(deg2rad(epsilon)), 6)
+
+# Calculates Alpha
+def geocentric_Right_Ascension(lamda, epsilon, beta):
+    lamda_rad = deg2rad(lamda)
+    epsilon_rad = deg2rad(epsilon)
+
+    return round(limitDegrees(rad2deg(atan2(sin(lamda_rad) * cos(epsilon_rad) - tan(deg2rad(beta))* sin(epsilon_rad), cos(lamda_rad)))), 6)
+
+#Calculates Delta
+def geocentric_Declination(beta, epsilon, lamda):
+    beta_rad = deg2rad(beta)
+    epsilon_rad = deg2rad(epsilon)
+
+    return round(rad2deg(asin(sin(beta_rad) * cos(epsilon_rad) + cos(beta_rad) * sin(epsilon_rad) * sin(deg2rad(lamda)))), 6)
+
+# Calculates H
+def observer_Hour_Angle(nu, longitude, alpha_deg):
+    return round(limitDegrees(nu + longitude - alpha_deg), 6)
+
+# Calculates Xi
+def sun_Equatorial_Horizontal_Parallax(r):
+    return round(8.794 / (3600.0 * r), 6)
+
+# Calculates Del_Alpha and Delta_Prime
+def right_Ascension_Parallax_And_Topocentric_Decl(latitude, elevation, xi, h, delta):
+    lat_Rad = deg2rad(latitude)
+    xi_Rad = deg2rad(xi)
+    h_Rad = deg2rad(h)
+    delta_Rad = deg2rad(delta)
+    u = atan(0.99664719 * tan(lat_Rad))
+    y = 0.99664719 * sin(u) + elevation * sin(lat_Rad) / 6378140.0
+    x = cos(u) + elevation * cos(lat_Rad) / 6378140.0
+    delta_Alpha_Rad = atan2(- x * sin(xi_Rad) * sin(h_Rad), cos(delta_Rad) - x * sin(xi_Rad) * cos(h_Rad))
+    delta_Prime = rad2deg(atan2((sin(delta_Rad) - y*sin(xi_Rad))*cos(delta_Alpha_Rad),
+                                  cos(delta_Rad) - x*sin(xi_Rad) *cos(h_Rad)))
+    delta_Alpha = rad2deg(delta_Alpha_Rad)
+
+    return round(delta_Alpha, 6), round(delta_Prime, 6)
+
+# Calculates Alpha_Prime
+def topocentric_Right_Ascension(alpha, delta_alpha):
+    return round(alpha + delta_alpha, 6)
+
+# Calculates H_Prime
+def topocentric_Local_Hour_Angle(h, delta_Alpha):
+    return h - delta_Alpha
+
+# Calculates e0
+def topocentric_Elevation_Angle(latitude, delta_Prime, h_Prime):
+    lat_Rad = deg2rad(latitude)
+    delta_Prime_Rad = deg2rad(delta_Prime)
+
+    return round(rad2deg(asin(sin(lat_Rad)*sin(delta_Prime_Rad) +
+                        cos(lat_Rad)*cos(delta_Prime_Rad) * cos(deg2rad(h_Prime)))), 6)
+
+def annual_Pressure_Average(dailyDataLogPath):
+    with open(os.path.abspath(dailyDataLogPath)) as dailyDataFile:
+        # Number of lines
+        lineSplit = dailyDataFile.read().splitlines()
+        lineCount = len(lineSplit)
+
+        pressure = 0
+
+        for i in range(lineCount):
+            pressureIndex = lineSplit[i].split(', ')
+            pressure += float(pressureIndex[1])
+
+        pressureAverage = round(pressure / lineCount, 1)
+
+    return pressureAverage
+
+def annual_Temperature_Average(dailyDataLogPath):
+    with open(os.path.abspath(dailyDataLogPath)) as dailyDataFile:
+        # Number of lines
+        lineSplit = dailyDataFile.read().splitlines()
+        lineCount = len(lineSplit)
+
+        temperature = 0
+
+        for i in range(lineCount):
+            temperatureIndex = lineSplit[i].split(', ')
+            temperature += float(temperatureIndex[2])
+
+        temperatureAverage = round(temperature / lineCount, 1)
+
+    return temperatureAverage
+
+# Calculates Del_E
+def atmospheric_Refraction_Correction(p, t, atmos_refract, e0):
+    del_e = 0
+
+    if(e0 >= -1 * (sunRadius + atmos_refract)):
+        del_e = (p / 1010) * (283.0 / (273.0 + t)) * 1.02 / (60.0 * tan(deg2rad(e0 + 10.3 / (e0 + 5.11))))
+    
+    return round(del_e, 6)
+
+# Calculates E
+def topcentric_Elevation_Angle_Corrected(e0, delta_e):
+    return round(e0 + delta_e, 6)
+
+# Calculates Zenith
+def topocentric_Zenith_Angle(e):
+    return round(90.0 - e, 6)
+
+# Calculates Azimuth_Astro
+def topocentric_Azimuth_Angle_Astro(h_prime, latitude, delta_prime):
+    h_Prime_Rad = deg2rad(h_prime)
+    lat_Rad = deg2rad(latitude)
+
+    return round(limitDegrees(rad2deg(atan2(sin(h_Prime_Rad), cos(h_Prime_Rad) * sin(lat_Rad) - tan(deg2rad(delta_prime)) * cos(lat_Rad)))), 6)
+
+# Calculates Azimuth
+def topcentric_Azimuth_Angle(azimuth_Astro):
+    return round(limitDegrees(azimuth_Astro + 180.0), 6)
+
+# Calculates Incidence
+def surface_Incidence_Angle(zenith, azimuth_Astro, azm_rotation, slope):
+    zenith_rad = deg2rad(zenith)
+    slope_rad = deg2rad(slope)
+
+    return round(rad2deg(acos(cos(zenith_rad) * cos(slope_rad) + sin(slope_rad) * sin(zenith_rad) * cos(deg2rad(azimuth_Astro - azm_rotation)))), 6)
+
+# Calculates M
+def sun_Mean_Longitude(jme):
+    return round(limitDegrees(280.4664567 + jme*(360007.6982779 + jme*(0.03032028 +
+                    jme*(1/49931.0   + jme*(-1/15300.0     + jme*(-1/2000000.0)))))), 6)
+
+# Calculates E (Equation of Time)
+def equation_Of_Time(m, alpha, del_psi, epsilon):
+    return round(limitMinutes(4.0*(m - 0.0057183 - alpha + del_psi*cos(deg2rad(epsilon)))), 6)
+
+# Calculates M0
+def approx_Sun_Transit_Time(alpha_zero, longitude, nu):
+    return round((alpha_zero - longitude - nu) / 360.0, 6)
+
+# Calculates V (Apparent Sidereal Time)    
+def apparent_Sidereal_Time_UT0(year, month, day, dut1, tz, deltaT):
+    jd_UT0 = julianDay(year, month, day, 0, 0, 0, dut1, tz)
+    jc_UT0 = julianCentury(jd_UT0)
+    jde_UT0 = julianEphemerisDay(jd_UT0, deltaT)
+    jce_UT0 = julianEphemerisCentury(jde_UT0)
+    jme_UT0 = julianEphemerisMillennium(jce_UT0)
+
+    x0_UT0 = mean_Elongation_Moon_Sun(jce_UT0)
+    x1_UT0 = mean_Anomaly_Sun(jce_UT0)
+    x2_UT0 = mean_Anomaly_Moon(jce_UT0)
+    x3_UT0 = argument_Latitude_Moon(jce_UT0)
+    x4_UT0 = ascending_Longitude_Moon(jce_UT0)
+    xList_UT0 = [x0_UT0, x1_UT0, x2_UT0, x3_UT0, x4_UT0]
+
+    psi_UT0 = nutation_Longitude_and_Obliquity(jce_UT0, xList_UT0)
+    epsilon0_UT0 = ecliptic_Mean_Obliquity(jme_UT0)
+    epsilon_UT0 = ecliptic_True_Obliquity(psi_UT0[1], epsilon0_UT0)
+    
+    nu0_UT0 = greenwich_Mean_Sidereal_Time(jd_UT0, jc_UT0)
+    nu_UT0 = greenwich_Sidereal_Time(nu0_UT0, psi_UT0[0], epsilon_UT0)
+    
+    return nu_UT0
+
+
+# Calculates Alpha and Delta [-1, 0, 1]
+def geocentric_Right_Ascension_And_Declination_TT0(year, month, day, dut1, tz, deltaT):
+    dateTT = datetime(year, month, day, 0, 0, 0)
+    dateTT_Time_Delta = timedelta(days=1)
+    dateTT_minusOne = dateTT - dateTT_Time_Delta
+    dateTT_Plus_One = dateTT + dateTT_Time_Delta
+    dateTT_List = [dateTT_minusOne.timetuple(), dateTT.timetuple(), dateTT_Plus_One.timetuple()]
+
+    jd_TT0_List = []
+    jde_TT0_List = []
+    jce_TT0_List = []
+    jme_TT0_List = []
+    l_TT0_List = []
+    r_TT0_List = []
+    del_tau_TT0_List = []
+    geocentric_Longitude_TT0_List = []
+    x0_TT0_List = []
+    x1_TT0_List = []
+    x2_TT0_List = []
+    x3_TT0_List = []
+    x4_TT0_List = []
+    xALL_TT0_List = []
+    del_Psi_TT0_List = []
+    lamda_TT0_List = []
+    epsilon0_TT0_List = []
+    epsilon_TT0_List = []
+    b_TT0_List = []
+    beta_TT0_List = []
+    alpha_TT0_List = []
+    delta_TT0_List = []
+
+    for x in range(len(dateTT_List)):
+        jd_TT0 = julianDay(dateTT_List[x][0], dateTT_List[x][1], dateTT_List[x][2], 0, 0, 0, dut1, tz)
+        jd_TT0_List.append(jd_TT0)
+
+        jde_TT0 = julianEphemerisDay(jd_TT0_List[x], deltaT)
+        jde_TT0_List.append(jde_TT0)
+
+        jce_TT0 = julianEphemerisCentury(jde_TT0_List[x])
+        jce_TT0_List.append(jce_TT0)
+
+        jme_TT0 = julianEphemerisMillennium(jce_TT0_List[x])
+        jme_TT0_List.append(jme_TT0)
+
+        l_TT0 = earth_Heliocentric_Longitude(jme_TT0_List[x])
+        l_TT0_List.append(l_TT0)
+
+        r_TT0 = earth_Radius_Vector(jme_TT0_List[x])
+        r_TT0_List.append(r_TT0)
+
+        del_tau_TT0 = abberation_Correction(r_TT0_List[x])
+        del_tau_TT0_List.append(del_tau_TT0)
+
+        geocentric_Longitude_TT0 = geocentric_Longitude(l_TT0_List[x])
+        geocentric_Longitude_TT0_List.append(geocentric_Longitude_TT0)
+
+        x0_TT0 = mean_Elongation_Moon_Sun(jce_TT0_List[x])
+        x0_TT0_List.append(x0_TT0)
+        x1_TT0 = mean_Anomaly_Sun(jce_TT0_List[x])
+        x1_TT0_List.append(x1_TT0)
+        x2_TT0 = mean_Anomaly_Moon(jce_TT0_List[x])
+        x2_TT0_List.append(x2_TT0)
+        x3_TT0 = argument_Latitude_Moon(jce_TT0_List[x])
+        x3_TT0_List.append(x3_TT0)
+        x4_TT0 = ascending_Longitude_Moon(jce_TT0_List[x])
+        x4_TT0_List.append(x4_TT0)
+        xALL_TT0 = [x0_TT0_List[x], x1_TT0_List[x], x2_TT0_List[x], x3_TT0_List[x], x4_TT0_List[x]]
+        xALL_TT0_List.append(xALL_TT0) 
+   
+        del_Psi_TT0 = nutation_Longitude_and_Obliquity(jce_TT0_List[x], xALL_TT0_List[x])
+        del_Psi_TT0_List.append(del_Psi_TT0)
+
+        lamda_TT0 = apparent_Sun_Longitude(geocentric_Longitude_TT0_List[x], del_Psi_TT0_List[x][0], del_tau_TT0_List[x])
+        lamda_TT0_List.append(lamda_TT0)
+
+        epsilon0_TT0 = ecliptic_Mean_Obliquity(jme_TT0_List[x])
+        epsilon0_TT0_List.append(epsilon0_TT0)
+
+        epsilon_TT0 = ecliptic_True_Obliquity(del_Psi_TT0_List[x][1], epsilon0_TT0_List[x])
+        epsilon_TT0_List.append(epsilon_TT0)
+
+        b_TT0 = earth_Heliocentric_Latitude(jme_TT0_List[x])
+        b_TT0_List.append(b_TT0)
+
+        beta_TT0 = geocentric_Latitude(b_TT0_List[x])
+        beta_TT0_List.append(beta_TT0)
+
+        #Calculates Alpha and Delta
+        alpha_TT0 = geocentric_Right_Ascension(lamda_TT0_List[x], epsilon_TT0_List[x], beta_TT0_List[x])
+        alpha_TT0_List.append(alpha_TT0)
+
+        delta_TT0 = geocentric_Declination(beta_TT0_List[x], epsilon_TT0_List[x], lamda_TT0_List[x])
+        delta_TT0_List.append(delta_TT0)
+    alpha_TT0_Adjusted_List = []
+    if(int(alpha_TT0_List[1]) == 0):
+        a0 = alpha_TT0_List[0] - int(alpha_TT0_List[0])
+        alpha_TT0_Adjusted_List.append(a0)
+        alpha_TT0_Adjusted_List.append(alpha_TT0_List[1])
+        alpha_TT0_Adjusted_List.append(alpha_TT0_List[2])
+        return alpha_TT0_Adjusted_List, delta_TT0_List
+    else:
+        if(int(alpha_TT0_List[2]) == 0):
+            a0 = alpha_TT0_List[0] - int(alpha_TT0_List[0])
+            a1 = alpha_TT0_List[1] - int(alpha_TT0_List[1])
+            alpha_TT0_Adjusted_List.append(a0)
+            alpha_TT0_Adjusted_List.append(a1)
+            alpha_TT0_Adjusted_List.append(alpha_TT0_List[2])
+            return alpha_TT0_Adjusted_List, delta_TT0_List
+
+    return alpha_TT0_List, delta_TT0_List
+
+# Calculates H0 (Local Hour Angle)
+def sun_Hour_Angle_At_Rise_Set(latitude, delta_zero, h0_prime):
+    h0 = -99999
+    lat_Rad = deg2rad(latitude)
+    delta_Zero_Rad = deg2rad(delta_zero)
+    argument = (sin(deg2rad(h0_prime)) - sin(lat_Rad) * sin(delta_Zero_Rad)) / (cos(lat_Rad) * cos(delta_Zero_Rad))
+
+    if(argument < -1):
+        h0 = -99999
+    elif(argument > 1):
+        h0 = 99999
+    else:
+        h0 = limitDegrees180(rad2deg(acos(argument)))
+
+    return h0
+
+def sun_Rise_Set(m0, h0, v, delta_T, alpha, delta, longitude):
+    h0_Dfrac = h0 / 360.0
+    m_rts = []
+    v_List = []
+    n_List = []
+
+    mZero = limitZero2One(m0) # Sun Transit Fraction
+    m_rts.append(mZero)
+    m1 = limitZero2One(m0 - h0_Dfrac) # Sunrise Day Fraction
+    m_rts.append(m1)
+    m2 = limitZero2One(m0 + h0_Dfrac) # Sunset Day Fraction
+    m_rts.append(m2)
+
+    aAD_List = []
+    bAD_List = []
+    
+    aA = alpha[1] - alpha[0]
+    if(aA > 2):
+        aa = limitZero2One(aA)
+        aAD_List.append(aa)
+    else:
+        aAD_List.append(aA)
+    bA = alpha[2] - alpha[1]
+    if(bA > 2):
+        ba = limitZero2One(bA)
+        bAD_List.append(ba)
+    else:
+        bAD_List.append(bA)
+
+    aD = delta[1] - delta[0]
+    if(aD > 2):
+        ad = limitZero2One(aD)
+        aAD_List.append(ad)
+    else:
+        aAD_List.append(aD)
+    bD = delta[2] - delta[1]
+    if(bD > 2):
+        bd = limitZero2One(bD)
+        bAD_List.append(bd)
+    else:
+        bAD_List.append(bD)
+
+    alpha_RTS = []
+    delta_RTS = []
+    lha_RTS = []
+
+    for i in range(len(m_rts)):
+        v_sub_i = v + 360.985647 * m_rts[i]
+        v_List.append(v_sub_i)
+
+        n_sub_i = m_rts[i] + delta_T / 86400
+        n_List.append(n_sub_i)
+
+        alpha_sub_i = alpha[1] + n_List[i] * (aAD_List[0] + bAD_List[0] + (bAD_List[0] - aAD_List[0]) * n_List[i]) / 2.0
+        alpha_RTS.append(alpha_sub_i)
+
+        delta_sub_i = delta[1] + n_List[i] * (aAD_List[1] + bAD_List[1] + (bAD_List[1]- aAD_List[1]) * n_List[i]) / 2.0
+        delta_RTS.append(delta_sub_i)
+
+        lha = round(limitDegrees180pm(v_List[i] + longitude - alpha_RTS[i]), 6)
+        lha_RTS.append(lha)
+
+    return lha_RTS, alpha_RTS, delta_RTS, m_rts
+
+def sun_Altitude(latitude, delta_Prime, h_Prime):
+    lat_Rad = deg2rad(latitude)
+    
+    delta_Prime_Rad_List = []
+    h_List = []
+
+    for i in range(3):
+        delta_Prime_Rad = deg2rad(delta_Prime[i])
+        delta_Prime_Rad_List.append(delta_Prime_Rad)
+
+        h_Sub_I = rad2deg(asin(sin(lat_Rad) * sin(delta_Prime_Rad_List[i]) + cos(lat_Rad) * cos(delta_Prime_Rad_List[i]) * cos(deg2rad(h_Prime[i]))))
+        h_List.append(h_Sub_I)
+
+    return h_List
+
+def sun_Transit_Frac(m0, h_Prime0, tz):
+    t = m0 - h_Prime0 / 360.0
+    t_Local = dayfrac_to_Local_hr(t, tz)
+
+    return round(t_Local, 6)
+
+def sun_Rise_and_Set(m_rts, h_rts, h0_Prime, delta_Prime, latitude, h_Prime, tz):
+
+    R = m_rts[1] + (h_rts[1] - h0_Prime) / (360.0 * cos(deg2rad(delta_Prime[1])) * cos(deg2rad(latitude)) * sin(deg2rad(h_Prime[1])))
+    r_Local = dayfrac_to_Local_hr(R, tz)
+
+    S = m_rts[2] + (h_rts[2] - h0_Prime) / (360.0 * cos(deg2rad(delta_Prime[2])) * cos(deg2rad(latitude)) * sin(deg2rad(h_Prime[2])))
+    s_Local = dayfrac_to_Local_hr(S, tz)
+
+    return r_Local, s_Local
