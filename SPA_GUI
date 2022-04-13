@@ -1,0 +1,871 @@
+from tkinter import *
+from tkinter import ttk, messagebox, filedialog
+from datetime import datetime, timezone
+from SPA_Functions import *
+import os
+
+##############################################################################
+############################# Parameters Section #############################
+##############################################################################
+
+# Color Grouping for different UI elements
+color1 = "#002D70" # Background Color
+color2 = "#498DF2" # Text Color
+color3 = "#0060F0" # 
+color4 = "#224170" # Input Box Color
+color5 = "#004BBD"
+colorGold = "#BDA613" # Tabulation Button Color
+colorWhite = "#ffffff"
+colorBlack = "#000000"
+
+# Entry Box Parameters Section
+startRow = 0
+entryHeight = 5
+entryWidth = 5
+entryWideWidth = 10
+entryBorder = 2.5
+radioButtonFontType = "Gill Sans MT"
+radioFontSize = 15
+spaceBetween = 10
+
+# Title Information Widgets
+releaseDateText = "01APR22"
+
+# Input Widgets
+yearText = "Year: "
+monthText = "Month: "
+dayText = "Day: "
+manual = "Manual"
+auto = "Automatic"
+
+latitude = location()[0]
+longitude = location()[1]
+timeZone = timezoneOffset(location()[2] , utcTuple()[8])
+
+##############################################################################
+#################### Root, Canvas, Frames for Main Window ####################
+##############################################################################
+
+root = Tk()
+root.title("Solar Position Algorithm Calculator -- Version: 1.0")
+root.geometry("600x800")
+root.configure(background=color1)
+root.update_idletasks()
+
+# Main Frame
+mainFrame = Frame(root)
+mainFrame.pack(fill=BOTH, expand=TRUE)
+
+# Main Canvas
+mainCanvas = Canvas(mainFrame, bg=color1)
+mainCanvas.pack(side=LEFT, fill=BOTH, expand=TRUE)
+
+# Canvas Scrollbar
+canvasScroll = ttk.Scrollbar(mainFrame, orient=VERTICAL, command=mainCanvas.yview)
+canvasScroll.pack(side=RIGHT, fill='y')
+
+# Configure Canvas
+mainCanvas.configure(yscrollcommand=canvasScroll.set)
+mainCanvas.bind('<Configure>', lambda e: mainCanvas.configure(scrollregion=mainCanvas.bbox("all")))
+
+# Secondary Frame in mainCanvas
+secondFrame = Frame(mainCanvas)
+
+# Add new frame into a window in the Canvas
+mainCanvas.create_window((0,0), window=secondFrame, anchor="nw")
+
+subTitle = Label(root, text="By: Donald Boos")
+releaseDate = Label(root, text=releaseDateText)
+
+startYearEntry = Entry(root)
+startMonthEntry = Entry(root)
+startDayEntry = Entry(root)
+endYearEntry = Entry(root)
+endMonthEntry = Entry(root)
+endDayEntry = Entry(root)
+
+observerLatitudeEntry = Entry(root)
+observerLongitudeEntry = Entry(root)
+observerTimezoneEntry = Entry(root)
+
+##############################################################################
+################################## Functions #################################
+##############################################################################
+
+def sectionTitle(textInput, rootInput):
+    sectionFontType = "Elephant"
+    sectionFontSize = 25
+    sectionRelief = "sunken"
+    sectionWidth = 15
+    sectionTitle = Label(rootInput, text=textInput, font=(sectionFontType, sectionFontSize), fg=color2, bg=color4, relief=sectionRelief, width=sectionWidth)
+
+    return sectionTitle
+
+# Title Section for subsections like Start Date and End Date
+def subsectionTitle(textInput, rootInput):
+    subsectionTitleFont = "Arial"
+    subsectionTitleFontSize = 15
+    subsectionTitle = Label(rootInput, text=textInput, fg=colorWhite, bg=color1, font=(subsectionTitleFont, subsectionTitleFontSize))
+    
+    return subsectionTitle
+
+# Formatting for input box titles such as "Year", "Observer Latitude", and "Temperature"
+def inputFieldTitle(inputText, rootInput):
+    inputFieldTitleFont = "Book Antiqua"
+    inputFieldTitleFontSize = 12
+    inputFieldTitlePadY = 5
+    inputFieldTitle = Label(rootInput, text=inputText, pady=inputFieldTitlePadY, fg=colorWhite, bg=color1, font=(inputFieldTitleFont, inputFieldTitleFontSize))
+
+    return inputFieldTitle
+
+def checkButton(rootInput, textInput, var, stateInput):
+    checkButtonFont = "Book Antiqua"
+    checkButtonFontSize = 15
+    checkbutton = Checkbutton(rootInput, text=textInput, variable=var, state=stateInput, font=(checkButtonFont, checkButtonFontSize), onvalue=1, offvalue=0, bg=color1, fg=colorWhite, selectcolor=colorBlack)
+
+    return checkbutton
+
+def fourDigitEntry(rootInput):
+    fourDigitEntryWidth = 5
+    fourDigitEntryBorder = 2.5
+    fourDigitEntry = Entry(rootInput, width=fourDigitEntryWidth, bg=color4, fg=colorWhite, borderwidth=fourDigitEntryBorder)
+
+    return fourDigitEntry
+
+def twoDigitEntry(rootInput):
+    fourDigitEntryWidth = 3
+    fourDigitEntryBorder = 2.5
+    fourDigitEntry = Entry(rootInput, width=fourDigitEntryWidth, bg=color4, fg=colorWhite, borderwidth=fourDigitEntryBorder)
+
+    return fourDigitEntry
+
+def eightDigitEntry(rootInput):
+    eightDigitEntryWidth = 10
+    eightDigitEntryBorder = 2.5
+    eightDigitEntry = Entry(rootInput, width=eightDigitEntryWidth, bg=color4, fg=colorWhite, borderwidth=eightDigitEntryBorder)
+
+    return eightDigitEntry
+
+def frame():
+    frameXpad = 5
+    frameYpad = 5
+    frameBD = 0
+    frameRelief = "sunken"
+    frame = LabelFrame(secondFrame, padx=frameXpad, pady=frameYpad, bg=color1, bd=frameBD, relief=frameRelief)
+
+    return frame
+
+def radioButtonFrame():
+    frameXpad = 5
+    frameYpad = 5
+    frameBD = 0
+    frameRelief = "sunken"
+    frame = LabelFrame(secondFrame, padx=frameXpad, pady=frameYpad, bg=color1, bd=frameBD, relief=frameRelief)
+
+    return frame
+
+def timeInputFrame():
+    frameXpad = 0
+    frameYpad = 0
+    frameBD = 0
+    frameRelief = "sunken"
+    frame = LabelFrame(secondFrame, padx=frameXpad, pady=frameYpad, bg=color1, bd=frameBD, relief=frameRelief)
+
+    return frame
+
+def save_File(data):
+    filepath = os.environ.get("USERPROFILE")
+    text_File = filedialog.asksaveasfilename(defaultextension=".*", initialdir= filepath, title="Save File", filetypes=(("Text Files", "*.txt"), ("All Files", "*.*")))
+    if text_File:
+        name = text_File
+        name = name.replace(filepath, "")
+        with open(text_File, "w") as f:
+            for key, value in data.items():
+                f.write('%s:%s\n' % (key, value))
+
+def clock():
+    # Gets the current UTC Time and adds the time as text and loops through it
+    currentTime = datetime.now(timezone.utc).strftime('%H:%M:%S')
+    currentTimeText.config(text=currentTime)
+    currentTimeText.after(1000, clock)
+
+def removeChildFrames(frameName):
+    for widget in frameName.winfo_children():
+        widget.destroy()
+
+def dateManAuto(value):
+    global startYearEntry
+    global currentTimeText
+    global startMonthEntry
+    global startDayEntry
+    global endYearEntry
+    global endMonthEntry
+    global endDayEntry
+
+    if(value == 0):
+        root.geometry("600x801")
+
+        # Other selection UI elements destroyed
+        removeChildFrames(timeInputManAutoFrame)
+
+        # Current Time Labels and Grid Layout
+        currentTimeLabel = subsectionTitle("Current UTC Time: ", timeInputManAutoFrame)
+        currentTimeLabel.grid(row=0, column=0, padx=(175,0))
+
+        # Current Time Text Labels
+        currentTimeText = subsectionTitle("", timeInputManAutoFrame)
+
+        # Current Time Grid
+        currentTimeText.grid(row=0, column=1)
+        clock()
+
+    elif(value == 1):
+        root.geometry("600x802")
+        # Other selection UI elements destroyed
+        removeChildFrames(timeInputManAutoFrame)
+
+        # Titles for start and end date
+        startDate = subsectionTitle("Start Date: ", timeInputManAutoFrame)
+        endDate = subsectionTitle("End Date: ", timeInputManAutoFrame)
+
+        # Labels for start date Year Month Day
+        startYearText = inputFieldTitle(yearText, timeInputManAutoFrame)
+        startMonthText = inputFieldTitle(monthText, timeInputManAutoFrame)
+        startDayText = inputFieldTitle(dayText, timeInputManAutoFrame)
+
+        # Labels for start date Year Month Day
+        endYearText = inputFieldTitle(yearText, timeInputManAutoFrame)
+        endMonthText = inputFieldTitle(monthText, timeInputManAutoFrame)
+        endDayText = inputFieldTitle(dayText, timeInputManAutoFrame)
+
+        # Entry fields for start date Year Month Day
+        startYearEntry = fourDigitEntry(timeInputManAutoFrame)
+        startMonthEntry = twoDigitEntry(timeInputManAutoFrame)
+        startDayEntry = twoDigitEntry(timeInputManAutoFrame)
+        
+        # Entry fields for start Date Year Month Day
+        endYearEntry = fourDigitEntry(timeInputManAutoFrame)
+        endMonthEntry = twoDigitEntry(timeInputManAutoFrame)
+        endDayEntry = twoDigitEntry(timeInputManAutoFrame)
+
+        startDate.grid(row=0, column=0, padx=(120,0))
+        startYearText.grid(row=1, column=1)
+        startYearEntry.grid(row=1, column=2, padx=(0,5))
+        startMonthText.grid(row=1, column=3)
+        startMonthEntry.grid(row=1, column=4, padx=(0,5))
+        startDayText.grid(row=1, column=5)
+        startDayEntry.grid(row=1, column=6, padx=(0,5))
+
+        endDate.grid(row=2, column=0, padx=(120,0))
+        endYearText.grid(row=3, column=1)
+        endYearEntry.grid(row=3, column=2, padx=(0,5))
+        endMonthText.grid(row=3, column=3)
+        endMonthEntry.grid(row=3, column=4, padx=(0,5))
+        endDayText.grid(row=3, column=5)
+        endDayEntry.grid(row=3, column=6, padx=(0,5))
+    else:
+        print("Error in selecting manual or automatic date choice")
+
+def locManAuto(value):
+    global observerLatitudeEntry
+    global observerLongitudeEntry
+    global observerTimezoneEntry
+    
+    if(value == 0):
+        root.geometry("600x803")
+        removeChildFrames(locInputManAutoFrame)
+        
+        observerLatitude = inputFieldTitle("Observer Latitude (negative south of equator): ", locInputManAutoFrame)
+        observerLatitude.grid(row=1, column=0, padx=(60,0), sticky='e')
+
+        observerLatitudeFill = inputFieldTitle(latitude, locInputManAutoFrame)
+        observerLatitudeFill.grid(row=1, column=1)
+
+        observerLongitude = inputFieldTitle("Observer Longitude (negative west of Greenwich): ", locInputManAutoFrame)
+        observerLongitude.grid(row=2, column=0, sticky='e')
+
+        observerLongitudeFill = inputFieldTitle(longitude, locInputManAutoFrame)
+        observerLongitudeFill.grid(row=2, column=1)
+
+        observerTimezone = inputFieldTitle("Observer Timezone: ", locInputManAutoFrame)
+        observerTimezone.grid(row=3, column=0, sticky='e')
+
+        observerTimezoneFill = inputFieldTitle(timeZone, locInputManAutoFrame)
+        observerTimezoneFill.grid(row=3, column=1)
+
+    elif(value == 1):
+        root.geometry("600x804")
+        removeChildFrames(locInputManAutoFrame)
+        
+        observerLatitude = inputFieldTitle("Observer Latitude (negative south of equator) [degrees]: ", locInputManAutoFrame)
+        observerLatitude.grid(row=1, column=0, padx=(60,0), sticky='e')
+
+        observerLatitudeEntry = eightDigitEntry(locInputManAutoFrame)
+        observerLatitudeEntry.grid(row=1, column=1)
+
+        observerLongitude = inputFieldTitle("Observer Longitude (negative west of Greenwich) [degrees]: ", locInputManAutoFrame)
+        observerLongitude.grid(row=2, column=0, sticky='e')
+
+        observerLongitudeEntry = eightDigitEntry(locInputManAutoFrame)
+        observerLongitudeEntry.grid(row=2, column=1)
+
+        observerTimezone = inputFieldTitle("Observer Timezone [hours]: ", locInputManAutoFrame)
+        observerTimezone.grid(row=3, column=0, sticky='e')
+
+        observerTimezoneEntry = eightDigitEntry(locInputManAutoFrame)
+        observerTimezoneEntry.grid(row=3, column=1)
+ 
+    else:
+        print("Error in selecting manual or automatic date choice")
+
+# Main SPA input calculation function
+def spa_Calculation_Result(year, month, day, hour, minute, second, delta_ut1, timezoneInput, delta_t, longitudeInput, latitudeInput, elevationInput, pressureInput, temperatureInput, atmosRefractInput, azmRotationInput, slopeInput):
+    # Julian Calculations
+    jd = julianDay(year, month, day, hour, minute, second, delta_ut1, timezoneInput)
+    jc = julianCentury(jd)
+    jde = julianEphemerisDay(jd, delta_t)
+    jce = julianEphemerisCentury(jde)
+    jme = julianEphemerisMillennium(jce)
+    # Earth Periodic Calculations
+    l = earth_Heliocentric_Longitude(jme)
+    b = earth_Heliocentric_Latitude(jme)
+    r = earth_Radius_Vector(jme)
+    # Sun Periodic Calculations
+    theta = geocentric_Longitude(l)
+    beta = geocentric_Latitude(b)
+    # Nutation in Longitude and Obliquity
+    x0 = mean_Elongation_Moon_Sun(jce)
+    x1 = mean_Anomaly_Sun(jce)
+    x2 = mean_Anomaly_Moon(jce)
+    x3 = argument_Latitude_Moon(jce)
+    x4 = ascending_Longitude_Moon(jce)
+    xList = [x0, x1, x2, x3, x4]
+    psi = nutation_Longitude_and_Obliquity(jce, xList) # NOTE: this has two returned values
+    # True Obliquity of the Ecliptic
+    mean_Epsilon = ecliptic_Mean_Obliquity(jme)
+    epsilon = ecliptic_True_Obliquity(psi[1], mean_Epsilon)
+    # Abberation Correction
+    delta_Tau = abberation_Correction(r)
+    # Apparent Sun Longitude
+    lamda = apparent_Sun_Longitude(theta, psi[0], delta_Tau)
+    # Sidereal Time at Greenwich
+    nu0 = greenwich_Mean_Sidereal_Time(jd, jc)
+    nu = greenwich_Sidereal_Time(nu0, psi[0], epsilon)
+    # Geocentric Sun Right Ascension
+    alpha = geocentric_Right_Ascension(lamda, epsilon, beta)
+    # Geocentric Sun Declination
+    delta = geocentric_Declination(beta, epsilon, lamda)
+    # Observer Local Hour Angle
+    h = observer_Hour_Angle(nu, longitudeInput, alpha)
+    # Topocentric Sun Right Ascension
+    xi = sun_Equatorial_Horizontal_Parallax(r)
+    delta_Alpha = right_Ascension_Parallax_And_Topocentric_Decl(latitudeInput, elevationInput, xi, h, delta)[0]
+    # Topocentric Sun Declination
+    delta_Prime = right_Ascension_Parallax_And_Topocentric_Decl(latitudeInput, elevationInput, xi, h, delta)[1]
+    # Topocentric Sun Right Ascension
+    alpha_Prime = topocentric_Right_Ascension(alpha, delta_Alpha)
+    # Topocentric Local Hour Angle
+    h_Prime = topocentric_Local_Hour_Angle(h, delta_Alpha)
+    # Topocentric Elevation Angle
+    e0 = topocentric_Elevation_Angle(latitudeInput, delta_Prime, h_Prime)
+    # Atmopheric Refraction Correction
+    delta_e = atmospheric_Refraction_Correction(pressureInput, temperatureInput, atmosRefractInput, e0)
+    # Topocentric Elevation Angle (Corrected)
+    e = topcentric_Elevation_Angle_Corrected(e0, delta_e)
+
+    zenith = round(topocentric_Zenith_Angle(e),2)
+    azimuth_Astro = round(topocentric_Azimuth_Angle_Astro(h_Prime, latitudeInput, delta_Prime),2)
+    azimuth = topcentric_Azimuth_Angle(azimuth_Astro)
+    incident = surface_Incidence_Angle(zenith, azimuth_Astro, azmRotationInput, slopeInput)
+    solar_Altitude = round(e,2)
+    solar_Declination = round(delta_Prime,3)
+
+    m = sun_Mean_Longitude(jme)
+    eot = equation_Of_Time(m, alpha, psi[0], epsilon)
+
+    nu_UT0 = apparent_Sidereal_Time_UT0(year, month, day, delta_ut1, timezoneInput, delta_t)
+
+    alpha_TT = geocentric_Right_Ascension_And_Declination_TT0(year, month, day, delta_ut1, timezoneInput, delta_t)
+    alpha0 = alpha_TT[0][1]
+    delta0 = alpha_TT[1][1]
+
+    m0 = approx_Sun_Transit_Time(alpha0, longitudeInput, nu_UT0)
+
+    h0 = sun_Hour_Angle_At_Rise_Set(latitudeInput, delta0, h0_Prime)
+
+    local_RTS = sun_Rise_Set(m0, h0, nu_UT0, delta_t, alpha_TT[0], alpha_TT[1], longitudeInput)
+
+    sun = sun_Altitude(latitudeInput, local_RTS[2], local_RTS[0])
+
+    transit = sun_Transit_Frac(local_RTS[3][0], local_RTS[0][0], timezoneInput)
+    transitTime = dayfrac_to_Time(transit)
+
+    r_and_s = sun_Rise_and_Set(local_RTS[3], sun, h0_Prime, local_RTS[2], latitudeInput, local_RTS[0], timezoneInput)
+    sunRise = dayfrac_to_Time(r_and_s[0])
+    sunSet = dayfrac_to_Time(r_and_s[1])
+
+    return solar_Altitude, zenith, azimuth, solar_Declination, sunRise, transitTime, sunSet, round(sun[0],2), h0
+
+##############################################################################
+################################ Time Section ################################
+##############################################################################
+
+# Title section frame and grid
+timeSectionFrame = frame()
+timeSectionFrame.pack(fill='both')
+
+timeSectionTitle = sectionTitle("Time Section", timeSectionFrame)
+timeSectionTitle.grid(row=0, column=0, padx=120, pady=10)
+
+# Radio Buttons for Manual or Automatic Time Gathering
+
+dma = IntVar()
+dma.set(None)
+
+timeManAutoFrame = radioButtonFrame()
+timeManAutoFrame.pack(fill='both')
+
+dateAuto = Radiobutton(timeManAutoFrame, text=auto, pady=10, fg=colorWhite, bg=color1, highlightcolor=color1, highlightbackground=color1, selectcolor=colorBlack, font=(radioButtonFontType, radioFontSize),  variable=dma, value=0, command=lambda: dateManAuto(dma.get()))
+
+dateManual = Radiobutton(timeManAutoFrame, text=manual, pady=10, fg=colorWhite, bg=color1, selectcolor=colorBlack, font=(radioButtonFontType, radioFontSize),  variable=dma, value=1, command=lambda: dateManAuto(dma.get()))
+
+dateManual.grid(row=1, column=0, ipadx=130, columnspan=2)
+dateAuto.grid(row=1, column=2, columnspan=2)
+
+# Manual input fields or automatic section
+timeInputManAutoFrame = timeInputFrame()
+timeInputManAutoFrame.pack(fill='both')
+
+##############################################################################
+############################## Location Section ##############################
+##############################################################################
+
+# Title section frame and grid
+locationSectionTitleFrame = frame()
+locationSectionTitleFrame.pack(fill='both')
+
+locationSectionTitle = sectionTitle("Location Section", locationSectionTitleFrame)
+locationSectionTitle.grid(row=0, column=0, padx=120, pady=10)
+
+# Radio Buttons for Manual or Automatic Location Gathering
+lma = IntVar()
+lma.set(None)
+
+locManAutoFrame = radioButtonFrame()
+locManAutoFrame.pack(fill='both')
+
+locAuto = Radiobutton(locManAutoFrame, text=auto, pady=10, fg=colorWhite, bg=color1, selectcolor=colorBlack, font=(radioButtonFontType, radioFontSize), variable=lma, value=0, command=lambda: locManAuto(lma.get()))
+
+locManual = Radiobutton(locManAutoFrame, text=manual, pady=10, fg=colorWhite, bg=color1, selectcolor=colorBlack, font=(radioButtonFontType, radioFontSize), variable=lma, value=1, command=lambda: locManAuto(lma.get()))
+
+locManual.grid(row=1, column=0, ipadx=130)
+locAuto.grid(row=1, column=1)
+
+# Manual input fields or automatic section
+locInputManAutoFrame = radioButtonFrame()
+locInputManAutoFrame.pack(fill='both')
+
+##############################################################################
+############################# Additional Section #############################
+##############################################################################
+
+# Title section frame and grid
+additionalSectionTitleFrame = frame()
+additionalSectionTitleFrame.pack(fill='both')
+
+additionalSectionTitle = sectionTitle("Additional Section", additionalSectionTitleFrame)
+additionalSectionTitle.grid(row=0, column=0, padx=120, pady=10)
+
+additionalInputSectionFrame = frame()
+additionalInputSectionFrame.pack(fill="both")
+
+# Required Values Section configuration
+observerElevation = inputFieldTitle("Observer Elevation [meters]: ", additionalInputSectionFrame)
+observerElevation.grid(row=0, column=0, padx=(200,0), sticky='e')
+
+observerElevationEntry = eightDigitEntry(additionalInputSectionFrame)
+observerElevationEntry.insert(0,"0")
+observerElevationEntry.grid(row=0, column=1, padx=(0,5))
+
+annualPressure = inputFieldTitle("Annual Average Local Pressure [millibars]: ", additionalInputSectionFrame)
+annualPressure.grid(row=1, column=0, sticky='e')
+
+annualPressureEntry = eightDigitEntry(additionalInputSectionFrame)
+annualPressureEntry.insert(0, "1013.3")
+annualPressureEntry.grid(row=1, column=1, padx=(0,5))
+
+annualTemperature = inputFieldTitle("Annual Average Local Temperature [degrees Celsius]: ", additionalInputSectionFrame)
+annualTemperature.grid(row=2, column=0, sticky='e')
+
+annualTemperatureEntry = eightDigitEntry(additionalInputSectionFrame)
+annualTemperatureEntry.insert(0,"15.0")
+annualTemperatureEntry.grid(row=2, column=1, padx=(0,5))
+
+deltaUT1 = inputFieldTitle("ΔUT1 = UT - UTC [seconds]: ", additionalInputSectionFrame)
+deltaUT1.grid(row=3, column=0, sticky='e')
+
+deltaUT1Entry = eightDigitEntry(additionalInputSectionFrame)
+deltaUT1Entry.insert(0,"-0.1")
+deltaUT1Entry.grid(row=3, column=1, padx=(0,5))
+
+leapSeconds = inputFieldTitle("Leap Seconds (TAI - UTC) [seconds]: ", additionalInputSectionFrame)
+leapSeconds.grid(row=4, column=0, sticky='e')
+
+leapSecondsEntry = eightDigitEntry(additionalInputSectionFrame)
+leapSecondsEntry.insert(0,"37")
+leapSecondsEntry.grid(row=4, column=1, padx=(0,5))
+
+##############################################################################
+############################# Optional Section ###############################
+##############################################################################
+
+# Title section frame and grid
+optionalSectionTitleFrame = frame()
+optionalSectionTitleFrame.pack(fill='both')
+
+optionalSectionTitle = sectionTitle("Optional Section", optionalSectionTitleFrame)
+optionalSectionTitle.grid(row=0, column=0, padx=120, pady=10)
+
+optionalInputSectionFrame = frame()
+optionalInputSectionFrame.pack(fill="both")
+
+# Optional input value field configuations
+surfaceAzimuthRotation = inputFieldTitle("Surface Azimuth Rotation [degrees]: ", optionalInputSectionFrame)
+surfaceAzimuthRotation.grid(row=0, column=0, padx=(150,0), sticky='e')
+
+surfaceAzimuthRotationEntry = eightDigitEntry(optionalInputSectionFrame)
+surfaceAzimuthRotationEntry.insert(0,"180")
+surfaceAzimuthRotationEntry.grid(row=0, column=1, padx=(0,5))
+
+surfaceSlope = inputFieldTitle("Surface Slope [degrees]: ", optionalInputSectionFrame)
+surfaceSlope.grid(row=1, column=0, sticky='e')
+
+surfaceSlopeEntry = eightDigitEntry(optionalInputSectionFrame)
+surfaceSlopeEntry.insert(0, "0")
+surfaceSlopeEntry.grid(row=1, column=1, padx=(0,5))
+
+atmosphericRefraction = inputFieldTitle("Atmospheric Refraction: ", optionalInputSectionFrame)
+atmosphericRefraction.grid(row=2, column=0, sticky='e')
+
+atmosphericRefractionEntry = eightDigitEntry(optionalInputSectionFrame)
+atmosphericRefractionEntry.insert(0, "0.5667")
+atmosphericRefractionEntry.grid(row=2, column=1, padx=(0,5))
+
+##############################################################################
+########################## DST and LST Date Input ############################
+##############################################################################
+
+dst_lstInputSectionFrame = frame()
+dst_lstInputSectionFrame.pack(fill="both")
+
+# DST and LST Instructions
+dst_lst_Title = inputFieldTitle("Remove values if local region does not observe DST", dst_lstInputSectionFrame)
+dst_lst_Title.grid(row=0, column=0, columnspan=6, padx=(120,0))
+
+
+# Titles for start and end date
+dst_Start_Date = inputFieldTitle("Daylight Savings Time Start: ", dst_lstInputSectionFrame)
+lst_Start_Date = inputFieldTitle("Standard Time Start: ", dst_lstInputSectionFrame)
+
+# Labels for start date Year Month Day
+dstMonthText = inputFieldTitle(monthText, dst_lstInputSectionFrame)
+dstDayText = inputFieldTitle(dayText, dst_lstInputSectionFrame)
+
+# Labels for start date Year Month Day
+lstMonthText = inputFieldTitle(monthText, dst_lstInputSectionFrame)
+lstDayText = inputFieldTitle(dayText, dst_lstInputSectionFrame)
+
+# Entry fields for start date Year Month Day
+dstMonthEntry = twoDigitEntry(dst_lstInputSectionFrame)
+dstMonthEntry.insert(0,"03")
+dstDayEntry = twoDigitEntry(dst_lstInputSectionFrame)
+dstDayEntry.insert(0,"13")
+        
+# Entry fields for start Date Year Month Day
+lstMonthEntry = twoDigitEntry(dst_lstInputSectionFrame)
+lstMonthEntry.insert(0,"11")
+lstDayEntry = twoDigitEntry(dst_lstInputSectionFrame)
+lstDayEntry.insert(0,"06")
+
+dst_Start_Date.grid(row=1, column=0, padx=(110,0), sticky="e")
+dstMonthText.grid(row=1, column=2, padx=(5,0))
+dstMonthEntry.grid(row=1, column=3, padx=(0,2))
+dstDayText.grid(row=1, column=4)
+dstDayEntry.grid(row=1, column=5, padx=(0,2))
+
+lst_Start_Date.grid(row=2, column=0, padx=(110,0), sticky="e")
+lstMonthText.grid(row=2, column=2, padx=(5,0))
+lstMonthEntry.grid(row=2, column=3, padx=(0,2))
+lstDayText.grid(row=2, column=4)
+lstDayEntry.grid(row=2, column=5, padx=(0,2))
+
+##############################################################################
+############################## Output Section ################################
+##############################################################################
+
+# Title section frame and grid
+outputSectionTitleFrame = frame()
+outputSectionTitleFrame.pack(fill='both', expand=TRUE)
+
+outputSectionTitle = sectionTitle("Output Section", outputSectionTitleFrame)
+outputSectionTitle.grid(row=0, column=0, padx=120, pady=10)
+
+# Output Checkbox Frame Creation
+outputSectionCheckBoxFrame = frame()
+outputSectionCheckBoxFrame.pack(fill='both', expand=TRUE)
+
+# Output Checkbox button variable creation
+sunAltitudeCheckButtonVar = IntVar()
+sunTransitAltitudeCheckButtonVar = IntVar()
+sunZenithAltitudeCheckButtonVar = IntVar()
+sunDirectionCheckButtonVar = IntVar()
+sunDeclinationCheckButtonVar = IntVar()
+sunriseCheckButtonVar = IntVar()
+solarnoonCheckButtonVar = IntVar()
+sunsetCheckButtonVar = IntVar()
+
+# Check button configuration
+sunAltitudeCheckButton = checkButton(outputSectionCheckBoxFrame, "Sun Altitude", sunAltitudeCheckButtonVar, "normal")
+sunAltitudeCheckButton.grid(row=0, column=0, padx=(225,0), sticky="w")
+
+sunTransitAltitudeCheckButton = checkButton(outputSectionCheckBoxFrame, "Sun Transit Altitude", sunTransitAltitudeCheckButtonVar, "normal")
+sunTransitAltitudeCheckButton.grid(row=1, column=0, padx=(225,0), sticky="w")
+
+sunZenithAltitudeCheckButton = checkButton(outputSectionCheckBoxFrame, "Sun Zenith Angle", sunZenithAltitudeCheckButtonVar, "normal")
+sunZenithAltitudeCheckButton.grid(row=2, column=0, padx=(225,0), sticky="w")
+
+sunDirectionCheckButton = checkButton(outputSectionCheckBoxFrame, "Sun Direction", sunDirectionCheckButtonVar, "normal")
+sunDirectionCheckButton.grid(row=3, column=0, padx=(225,0), sticky="w")
+
+sunDeclinationCheckButton = checkButton(outputSectionCheckBoxFrame, "Sun Declination", sunDeclinationCheckButtonVar, "normal")
+sunDeclinationCheckButton.grid(row=4, column=0, padx=(225,0), sticky="w")
+
+sunriseCheckButton = checkButton(outputSectionCheckBoxFrame, "Local Sunrise", sunriseCheckButtonVar, "normal")
+sunriseCheckButton.grid(row=5, column=0, padx=(225,0), sticky="w")
+
+solarnoonCheckButton = checkButton(outputSectionCheckBoxFrame, "Local Solar Noon", solarnoonCheckButtonVar, "normal")
+solarnoonCheckButton.grid(row=6, column=0, padx=(225,0), sticky="w")
+
+sunsetCheckButton = checkButton(outputSectionCheckBoxFrame, "Local Sunset", sunsetCheckButtonVar, "normal")
+sunsetCheckButton.grid(row=7, column=0, padx=(225,0), sticky="w")
+
+# Values from the dictionary are entered in the spa dictionary structure and executed
+def values_Input_To_Dict():
+    if(dma.get() == 1):
+        spa_Input_Dict.update({"year": int(startYearEntry.get())})
+        spa_Input_Dict.update({"month": int(startMonthEntry.get())})
+        spa_Input_Dict.update({"day": int(startDayEntry.get())})
+        spa_Input_Dict.update({"end_year": int(endYearEntry.get())})
+        spa_Input_Dict.update({"end_month": int(endMonthEntry.get())})
+        spa_Input_Dict.update({"end_day": int(endDayEntry.get())})
+        spa_Input_Dict.update({"hour": 0})
+        spa_Input_Dict.update({"minute": 0})
+        spa_Input_Dict.update({"second": 0})
+        if(dstMonthEntry.get() != ""):
+            spa_Input_Dict.update({"dst_month": int(dstMonthEntry.get())})
+        if(dstDayEntry.get() != ""):
+            spa_Input_Dict.update({"dst_day": int(dstDayEntry.get())})
+        if(lstMonthEntry.get() != ""):
+            spa_Input_Dict.update({"lst_month": int(lstMonthEntry.get())})
+        if(lstDayEntry.get() != ""):
+            spa_Input_Dict.update({"lst_day": int(lstDayEntry.get())})
+    elif(dma.get() == 0):
+        spa_Input_Dict.update({"year": ut1Tuple()[0]})
+        spa_Input_Dict.update({"month": ut1Tuple()[1]})
+        spa_Input_Dict.update({"day": ut1Tuple()[2]})
+        spa_Input_Dict.update({"hour": ut1Tuple()[3]})
+        spa_Input_Dict.update({"minute": ut1Tuple()[4]})
+        spa_Input_Dict.update({"second": ut1Tuple()[5]})
+    else: None
+    
+    if(lma.get() == 1):
+        spa_Input_Dict.update({"latitude": float(observerLatitudeEntry.get())})
+        spa_Input_Dict.update({"longitude": float(observerLongitudeEntry.get())})
+        spa_Input_Dict.update({"timezone": float(observerTimezoneEntry.get())})
+    elif(lma.get() == 0):
+        spa_Input_Dict.update({"latitude": latitude})
+        spa_Input_Dict.update({"longitude": longitude})
+        spa_Input_Dict.update({"timezone": timeZone})
+    else: None
+
+    spa_Input_Dict.update({"pressure": float(annualPressureEntry.get())})
+    spa_Input_Dict.update({"temperature": float(annualTemperatureEntry.get())})
+    spa_Input_Dict.update({"delta_ut1": float(deltaUT1Entry.get())})
+    spa_Input_Dict.update({"delta_t": deltaT(float(leapSecondsEntry.get()), float(deltaUT1Entry.get()))})
+    spa_Input_Dict.update({"atmos_refract": float(atmosphericRefractionEntry.get())})
+    spa_Input_Dict.update({"elevation": float(observerElevationEntry.get())})
+    spa_Input_Dict.update({"slope": float(surfaceSlopeEntry.get())})
+    spa_Input_Dict.update({"azm_rotation": float(surfaceAzimuthRotationEntry.get())})
+
+    # Error validation against the input values
+    validatingInputs = validateInputs(spa_Input_Dict)
+
+    # If there are errors a message box appears explaining the error
+    if(validatingInputs > 0):
+        errorTest = errorCode(validatingInputs)
+        messagebox.showerror("ERROR", str(errorTest))
+    elif(validatingInputs == 0):
+        #print(spa_Input_Dict)
+        if(dma.get() == 0):
+
+            # Plugs in the input values from the SPA dictionary and applies them to the current datetime.
+            auto = spa_Calculation_Result(spa_Input_Dict["year"], spa_Input_Dict["month"], spa_Input_Dict["day"], spa_Input_Dict["hour"], spa_Input_Dict["minute"], spa_Input_Dict["second"], spa_Input_Dict["delta_ut1"], spa_Input_Dict["timezone"], spa_Input_Dict["delta_t"], spa_Input_Dict["longitude"], spa_Input_Dict["latitude"], spa_Input_Dict["elevation"], spa_Input_Dict["pressure"], spa_Input_Dict["temperature"], spa_Input_Dict["atmos_refract"], spa_Input_Dict["azm_rotation"], spa_Input_Dict["slope"])
+
+            # Dictionary for the final output
+            outputList = []
+        
+            if(sunAltitudeCheckButtonVar.get() == 1):
+                sun_Altitude_Result = "Solar Altitude (Degrees): " + str(auto[0])
+                outputList.append(sun_Altitude_Result)
+            if(sunTransitAltitudeCheckButtonVar.get() == 1):
+                sun_Transit_Altitude_Result = "Solar Transit Altitude (Degrees): " + str(auto[7])
+                outputList.append(sun_Transit_Altitude_Result)
+            if(sunZenithAltitudeCheckButtonVar.get() == 1):
+                sun_Zenith_Result = 'Sun Zenith Angle: ' + str(auto[1])
+                outputList.append(sun_Zenith_Result)
+            if(sunDirectionCheckButtonVar.get() == 1):
+                sun_Direction_Result = 'Sun Direction (Degrees): ' + str(auto[2])
+                outputList.append(sun_Direction_Result)
+            if(sunDeclinationCheckButtonVar.get() == 1):
+                sun_Declination_Result = 'Sun Declination (Degrees): ' + str(auto[3])
+                outputList.append(sun_Declination_Result)
+            if(sunriseCheckButtonVar.get() == 1):
+                sunrise_Result = 'Sunrise: ' + str(f"{auto[4][0]:02d}") + ':' + str(f"{auto[4][1]:02d}" + ':' + str(f"{auto[4][2]:02d}"))
+                outputList.append(sunrise_Result)
+            if(solarnoonCheckButtonVar.get() == 1):
+                solarnoon_Result = 'Solar Noon: ' + str(f"{auto[5][0]:02d}") + ':' + str(f"{auto[5][1]:02d}") + ':' + str(f"{auto[5][2]:02d}")
+                outputList.append(solarnoon_Result)
+            if(sunsetCheckButtonVar.get() == 1):
+                sunset_Result = 'Sunset: ' + str(f"{auto[6][0]:02d}") + ':' + str(f"{auto[6][1]:02d}") + ':' + str(f"{auto[6][2]:02d}")
+                outputList.append(sunset_Result)
+            
+            # Final message box output for automatice time gathering
+            msg = "\n".join(outputList)
+            messagebox.showinfo("SPA Results", str(msg))
+
+        elif(dma.get() == 1):
+            
+            # Establishes a start date and end date for the manual input dates section
+            start_Date = datetime(year= spa_Input_Dict["year"], month= spa_Input_Dict["month"], day= spa_Input_Dict["day"])
+            end_Date = datetime(year= spa_Input_Dict["end_year"], month= spa_Input_Dict["end_month"], day= spa_Input_Dict["end_day"])
+            timedelta(days=1)
+
+            # If the location of interest shifts from DST and LST the dates are made into a proper datetime format
+            if(spa_Input_Dict["dst_month"] is not None and spa_Input_Dict["dst_day"] is not None and spa_Input_Dict["lst_month"] is not None and spa_Input_Dict["lst_day"] is not None):
+                dst_Date = datetime(start_Date.year, spa_Input_Dict["dst_month"], spa_Input_Dict["dst_day"])
+                lst_Date = datetime(start_Date.year, spa_Input_Dict["lst_month"], spa_Input_Dict["lst_day"])
+
+            date_Range_Dict = dict()
+
+            # Current Date in a proper datetime format
+            cur_Date = datetime(start_Date.year, datetime.now().month, datetime.now().day)
+
+            # Establishes the current values for sunrise, solarnoon and sunset
+            sunriseDST_Offset = 0
+            solarnoonDST_Offset = 0
+            sunsetDST_Offset = 0
+                       
+            while start_Date <= end_Date:
+                # The start date for the current loop iteration.
+                date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")] = dict()
+
+                # Plugs in the input values from the SPA dictionary and applies them in each loop
+                man = spa_Calculation_Result(start_Date.year, start_Date.month, start_Date.day, spa_Input_Dict["hour"], spa_Input_Dict["minute"], spa_Input_Dict["second"], spa_Input_Dict["delta_ut1"], spa_Input_Dict["timezone"], spa_Input_Dict["delta_t"], spa_Input_Dict["longitude"], spa_Input_Dict["latitude"], spa_Input_Dict["elevation"], spa_Input_Dict["pressure"], spa_Input_Dict["temperature"], spa_Input_Dict["atmos_refract"], spa_Input_Dict["azm_rotation"], spa_Input_Dict["slope"])
+                
+                # DST and LST offset for manual time generation.  Adjusts the final time based on the correction for the current timezone shift depending on daylight savings time (DST) and local standard time (LST)
+                if(spa_Input_Dict["dst_month"] is not None and spa_Input_Dict["dst_day"] is not None and spa_Input_Dict["lst_month"] is not None and spa_Input_Dict["lst_day"] is not None):
+                    if(int(start_Date.timestamp()) >= int(lst_Date.timestamp()) or int(start_Date.timestamp() < dst_Date.timestamp())): # The start date is in LST
+                        if(int(cur_Date.timestamp()) >= int(lst_Date.timestamp()) or int(cur_Date.timestamp() < dst_Date.timestamp())): # The Current Date is in LST
+                            sunriseDST_Offset = man[4][0]
+                            solarnoonDST_Offset = man[5][0]
+                            sunsetDST_Offset = man[6][0]
+                        elif(int(cur_Date.timestamp()) < int(lst_Date.timestamp()) and int(cur_Date.timestamp()) >= dst_Date.timestamp()): # The current date is in DST
+                            sunriseDST_Offset = man[4][0] - 1
+                            solarnoonDST_Offset = man[5][0] - 1
+                            sunsetDST_Offset = man[6][0] - 1
+                    elif(int(start_Date.timestamp()) < int(lst_Date.timestamp()) and int(start_Date.timestamp()) >= dst_Date.timestamp()): # The start date is in DST
+                        if(int(cur_Date.timestamp()) >= int(lst_Date.timestamp()) or int(cur_Date.timestamp() < dst_Date.timestamp())): # The Current Date is in LST
+                            sunriseDST_Offset = man[4][0] + 1
+                            solarnoonDST_Offset = man[5][0] + 1
+                            sunsetDST_Offset = man[6][0] + 1
+                        elif(int(start_Date.timestamp()) < int(lst_Date.timestamp()) and int(start_Date.timestamp()) >= dst_Date.timestamp()): #The current date is in DST
+                            sunriseDST_Offset = man[4][0]
+                            solarnoonDST_Offset = man[5][0]
+                            sunsetDST_Offset = man[6][0]
+                else:
+                    sunriseDST_Offset = man[4][0]
+                    solarnoonDST_Offset = man[5][0]
+                    sunsetDST_Offset = man[6][0]
+
+                # Sun Altitude largely irrelevant for this location
+                if(sunAltitudeCheckButtonVar.get() == 1):
+                    sun_Altitude_Result = "Sun Altitude not relevant for this output"
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sun Altitude" : sun_Altitude_Result})
+                
+                # Sun Transit Altitude is the its highest angle during solar noon
+                if(sunTransitAltitudeCheckButtonVar.get() == 1):
+                    sun_Transit_Altitude_Result = "Solar Transit Altitude (Degrees): " + str(man[7])
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sun Transit Altitude" : sun_Transit_Altitude_Result})
+                
+                # The highest angle the sun achievs above the horizon
+                if(sunZenithAltitudeCheckButtonVar.get() == 1):
+                    sun_Zenith_Result = str(man[1])
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sun Zenith Angle" : sun_Zenith_Result})
+                
+                # The direction the sun is at at a given day
+                if(sunDirectionCheckButtonVar.get() == 1):
+                    sun_Direction_Result = str(man[2])
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sun Direction" : sun_Direction_Result})
+                
+                # The sun declination for the given day
+                if(sunDeclinationCheckButtonVar.get() == 1):
+                    sun_Declination_Result = str(man[3])
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sun Declination" : sun_Declination_Result})
+                
+                # If the given location doesn't have a sunrise otherwise saves the sunrise time
+                if(sunriseCheckButtonVar.get() == 1):
+                    if(man[8] == -99999):
+                        sunrise_Result = "The Sun never rises for this day."
+                    elif(man[8] == 99999):
+                        sunrise_Result = "The Sun is up all day."
+                    else:
+                        sunrise_Result = str(f"{sunriseDST_Offset:02d}") + ':' + str(f"{man[4][1]:02d}" + ':' + str(f"{man[4][2]:02d}"))
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sunrise" : sunrise_Result})
+                # If the sun is up it gives solar noon time otherwise the sun never rises
+                if(solarnoonCheckButtonVar.get() == 1):
+                    if(man[8] == -99999):
+                        solarnoon_Result = "The Sun never rises for this day."
+                    else:
+                        solarnoon_Result = str(f"{solarnoonDST_Offset:02d}") + ':' + str(f"{man[5][1]:02d}") + ':' + str(f"{man[5][2]:02d}")
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Solar Noon" : solarnoon_Result})
+                
+                # If the given location doesn't have a sunset otherwise saves the sunset time
+                if(sunsetCheckButtonVar.get() == 1):
+                    if(man[8] == -99999):
+                        sunset_Result = "The Sun never rises for this day."
+                    elif(man[8] == 99999):
+                        sunset_Result = "The Sun is up all day."
+                    else:
+                        sunset_Result = str(f"{sunsetDST_Offset:02d}") + ':' + str(f"{man[6][1]:02d}") + ':' + str(f"{man[6][2]:02d}")
+                    date_Range_Dict[str(start_Date.year) + "-" + str(f"{start_Date.month:02d}") + "-" + str(f"{start_Date.day:02d}")].update({"Sunset" : sunset_Result})
+                
+                # Increments start date by 1 day
+                start_Date += timedelta(days=1)
+            
+            # Saves output file to the desired location
+            save_File(date_Range_Dict)
+        
+##############################################################################
+######################### Calculate Button Section ###########################
+##############################################################################
+
+# Tabulation Button Frame
+tabulationButtonFrame = frame()
+tabulationButtonFrame.pack(fill='both', expand=TRUE)
+
+# Tabulation Button Configuration
+tabulateButton = Button(tabulationButtonFrame, text="Calculate", bg=colorGold, fg=color1, command=values_Input_To_Dict)
+tabulateButton.grid(row=7, column=0, padx=(225,0), sticky="w") 
+
+# Loop function
+root.mainloop()
